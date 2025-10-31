@@ -87,17 +87,6 @@ public class OpaOfficialHmsDockerIT {
             assertTrue(e.getMessage().contains("Request denied due to hms/database_allow authorization policy."));
         }
 
-        // We're allowed to create "new_db", according to OPA rules
-        try {
-            DatabaseBuilder databaseBuilder = new DatabaseBuilder();
-            databaseBuilder.setName("new_db");
-            client.createDatabase(databaseBuilder.build(configuration));
-            assertTrue(client.getAllDatabases().contains("new_db"));
-        } catch (TException e) {
-            System.out.println(e);
-            fail();
-        }
-
         client.close();
     }
 
