@@ -1,0 +1,56 @@
+name: Makefile CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  create:
+    tags:
+        - 'v*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        java-version: [ '11', '17', '21' ]
+        hive-version: [ '3.1.3', '4.0.0', '4.1.0' ]
+        hadoop-version: [ '3.3.6', '3.4.2' ]
+      fail-fast: false
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v5
+    - uses: actions/setup-java@v5
+      with:
+        distribution: 'temurin'
+        java-version: ${{ matrix.java-version }}
+
+    - name: Version
+      if: github.ref_type == 'tag'
+      run: mvn versions:set -DnewVersion=${{ github.ref_name }}
+
+    - name: Build jar
+      run: make HIVE_VERSION=${{ matrix.hive-version }} HADOOP_VERSION=${{ matrix.hadoop-version }}
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      continue-on-error: true
+      with:
+        name: opa-authorizer-hive-${{ matrix.hive-version }}-hdp-${{ matrix.hadoop-version }}-java-${{ matrix.java-version }}
+        retention-days: 3
+        path: |
+          hms-v3/target/com.bosch.bdps.hms*
+          hms-v4/target/com.bosch.bdps.hms*
+
+    - name: Integration test
+      run: make integration-test HIVE_VERSION=${{ matrix.hive-version }} HADOOP_VERSION=${{ matrix.hadoop-version }}
+
+    - name: Release
+      uses: softprops/action-gh-release@v2.3.4
+      if: github.ref_type == 'tag' && matrix.java-version == '21'
+      with:
+        files: |
+          hms-v3/target/com.bosch.bdps.hms*
+          hms-v4/target/com.bosch.bdps.hms*
