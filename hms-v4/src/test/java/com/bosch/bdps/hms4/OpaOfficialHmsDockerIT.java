@@ -4,9 +4,11 @@ import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.MetaException;
+import org.apache.hadoop.hive.metastore.api.Partition;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.metastore.client.builder.CatalogBuilder;
 import org.apache.hadoop.hive.metastore.client.builder.DatabaseBuilder;
+import org.apache.hadoop.hive.metastore.client.builder.PartitionBuilder;
 import org.apache.hadoop.hive.metastore.client.builder.TableBuilder;
 import org.apache.thrift.TException;
 import org.junit.jupiter.api.AfterEach;
@@ -20,6 +22,8 @@ import org.testcontainers.utility.MountableFile;
 
 import java.io.IOException;
 import java.io.File;
+import java.util.Arrays;
+import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -111,5 +115,49 @@ public class OpaOfficialHmsDockerIT {
         }
 
         client.close();
+    }
+
+    /**
+     * Partition authorization against the real HMS: add_partitions (what e.g. Trino's
+     * {@code CALL system.sync_partition_metadata(...)} issues), drop_partition and a denied add_partition.
+     * The HMS hands a {@code PartitionWrapper} to the authorizer, which must be serializable for the OPA request.
+     */
+    @Test
+    void testPartitions() throws TException {
+        opaContainer.start();
+        hmsContainer.start();
+
+        HiveConf configuration = new HiveConf();
+        configuration.set("hive.metastore.uris", "thrift://" + hmsContainer.getHost() + ":" + hmsContainer.getMappedPort(9083));
+        HiveMetaStoreClient client = new HiveMetaStoreClient(configuration);
+
+        try {
+            client.createDatabase(new DatabaseBuilder().setName("new_db").build(configuration));
+            Table table = new TableBuilder()
+                    .setDbName("new_db")
+                    .setTableName("partitioned_tbl")
+                    .setType("EXTERNAL_TABLE")
+                    .addTableParam("EXTERNAL", "TRUE")
+                    .addCol("id", "int")
+                    .addPartCol("dt", "string")
+                    .create(client, configuration);
+
+            client.add_partitions(Arrays.asList(
+                    new PartitionBuilder().inTable(table).addValue("2026-10-19").build(configuration),
+                    new PartitionBuilder().inTable(table).addValue("2026-10-20").build(configuration)));
+            assertEquals(Arrays.asList("dt=2026-10-19", "dt=2026-10-20"),
+                    client.listPartitionNames("new_db", "partitioned_tbl", (short) -1));
+
+            assertTrue(client.dropPartition("new_db", "partitioned_tbl", Collections.singletonList("2026-10-19"), false));
+            assertEquals(Collections.singletonList("dt=2026-10-20"),
+                    client.listPartitionNames("new_db", "partitioned_tbl", (short) -1));
+
+            // The policy denies by partition value, so this also checks the partition content reaches OPA.
+            Partition denied = new PartitionBuilder().inTable(table).addValue("denied").build(configuration);
+            TException e = assertThrows(TException.class, () -> client.add_partition(denied));
+            assertTrue(e.getMessage().contains("Request denied due to hms/partition_allow authorization policy."), e.getMessage());
+        } finally {
+            client.close();
+        }
     }
 }

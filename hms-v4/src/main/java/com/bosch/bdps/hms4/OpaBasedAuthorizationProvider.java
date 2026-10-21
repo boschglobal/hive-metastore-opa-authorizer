@@ -148,7 +148,7 @@ public class OpaBasedAuthorizationProvider implements HiveMetastoreAuthorization
                 part, Arrays.toString(readRequiredPriv), Arrays.toString(writeRequiredPriv));
 
         Map<String, Object> parameters = new HashMap<>();
-        parameters.put("partition", part);
+        parameters.put("partition", part.getTPartition());
         parameters.put("readRequiredPriv", readRequiredPriv);
         parameters.put("writeRequiredPriv", writeRequiredPriv);
 
@@ -163,7 +163,7 @@ public class OpaBasedAuthorizationProvider implements HiveMetastoreAuthorization
 
         Map<String, Object> parameters = new HashMap<>();
         parameters.put("table", table.getTTable());
-        parameters.put("partition", part);
+        parameters.put("partition", part == null ? null : part.getTPartition());
         parameters.put("columns", columns);
         parameters.put("readRequiredPriv", readRequiredPriv);
         parameters.put("writeRequiredPriv", writeRequiredPriv);

@@ -29,10 +29,10 @@ test:
 	$(eval HIVE_MODULE_DIR := $(call get_hive_module_dir,$(HIVE_VERSION)))
 	mvn -f $(HIVE_MODULE_DIR)/pom.xml test -Dhive.version=$(HIVE_VERSION) -Dhadoop.version=$(HADOOP_VERSION)
 
-.PHONY: integration-test
-integration-test:
+.PHONY: verify
+verify:
 	$(eval HIVE_MODULE_DIR := $(call get_hive_module_dir,$(HIVE_VERSION)))
-	mvn -f $(HIVE_MODULE_DIR)/pom.xml integration-test -Dhive.version=$(HIVE_VERSION) -Dhadoop.version=$(HADOOP_VERSION)
+	mvn -f $(HIVE_MODULE_DIR)/pom.xml verify -Dhive.version=$(HIVE_VERSION) -Dhadoop.version=$(HADOOP_VERSION)
 
 # Test all modules with default versions (from pom.xml)
 .PHONY: test-all
@@ -40,6 +40,6 @@ test-all:
 	mvn test
 
 # Integration test all modules with default versions (from pom.xml)
-.PHONY: integration-test-all
-integration-test-all:
-	mvn integration-test
+.PHONY: verify-all
+verify-all:
+	mvn verify

@@ -143,7 +143,7 @@ public class OpaBasedAuthorizationProviderTest {
 
     @Test
     public void testAuthorizePartition() throws Exception {
-        Partition partition = mock(Partition.class);
+        Partition partition = mock(Partition.class, RETURNS_DEEP_STUBS);
         Privilege[] readPriv = new Privilege[]{Privilege.SELECT};
         Privilege[] writePriv = new Privilege[]{Privilege.INSERT};
 
@@ -157,7 +157,7 @@ public class OpaBasedAuthorizationProviderTest {
         assertEquals(Collections.singletonList("testGroup"), identity.get("groups"));
 
         HashMap<?, ?> resources = (HashMap<?, ?>) captor.getValue().get("resources");
-        assertEquals(partition, resources.get("partition"));
+        assertEquals(partition.getTPartition(), resources.get("partition"));
 
         HashMap<?, ?> privileges = (HashMap<?, ?>) captor.getValue().get("privileges");
         assertEquals(readPriv, privileges.get("readRequiredPriv"));
@@ -167,7 +167,7 @@ public class OpaBasedAuthorizationProviderTest {
     @Test
     public void testAuthorizeColumns() throws Exception {
         Table table = mock(Table.class);
-        Partition partition = mock(Partition.class);
+        Partition partition = mock(Partition.class, RETURNS_DEEP_STUBS);
         List<String> columns = Collections.singletonList("column1");
         Privilege[] readPriv = new Privilege[]{Privilege.SELECT};
         Privilege[] writePriv = new Privilege[]{Privilege.INSERT};
@@ -183,7 +183,7 @@ public class OpaBasedAuthorizationProviderTest {
 
         HashMap<?, ?> resources = (HashMap<?, ?>) captor.getValue().get("resources");
         assertEquals(table.getTTable(), resources.get("table"));
-        assertEquals(partition, resources.get("partition"));
+        assertEquals(partition.getTPartition(), resources.get("partition"));
         assertEquals(columns, resources.get("columns"));
 
         HashMap<?, ?> privileges = (HashMap<?, ?>) captor.getValue().get("privileges");
