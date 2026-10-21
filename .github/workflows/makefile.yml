@@ -49,7 +49,7 @@ jobs:
           hms-v4/target/com.bosch.bdps.hms*
 
     - name: Integration test
-      run: make integration-test HIVE_VERSION=${{ matrix.hive-version }} HADOOP_VERSION=${{ matrix.hadoop-version }}
+      run: make verify HIVE_VERSION=${{ matrix.hive-version }} HADOOP_VERSION=${{ matrix.hadoop-version }}
 
     - name: Release
       uses: softprops/action-gh-release@v2.3.4
